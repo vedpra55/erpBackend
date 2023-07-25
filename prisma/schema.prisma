@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model gl_companies {
+  company_id       Int                @id @default(autoincrement())
+  company_name     String             @unique @db.VarChar(255)
+  closed_flag      Boolean?           @default(false)
+  gl_sub_companies gl_sub_companies[]
+}
+
+model gl_sub_companies {
+  company_id       Int
+  sub_company_id   Int
+  sub_company_name String           @unique @db.VarChar(255)
+  country_code     String?          @db.VarChar(20)
+  city_code        String?          @db.VarChar(20)
+  closed_flag      Boolean?         @default(false)
+  gl_companies     gl_companies     @relation(fields: [company_id], references: [company_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_gl_sub_companies_company_id")
+  inv_department   inv_department[]
+  inv_locations    inv_locations[]
+  inv_products     inv_products[]
+  inv_suppliers    inv_suppliers[]
+  sys_programs     sys_programs[]
+  sys_roles        sys_roles[]
+
+  @@id([company_id, sub_company_id])
+}
+
+model inv_cardex {
+  company_id                                                                      Int?
+  sub_company_id                                                                  Int?
+  from_location                                                                   String?        @db.VarChar(10)
+  to_location                                                                     String?        @db.VarChar(10)
+  trans_dt                                                                        DateTime?      @db.Date
+  trans_no                                                                        String?        @db.VarChar(20)
+  trans_type                                                                      String?        @db.VarChar(255)
+  serial_no                                                                       Int            @default(autoincrement())
+  department_code                                                                 String?        @db.VarChar(3)
+  product_code                                                                    String?        @db.VarChar(10)
+  quantity                                                                        Int?
+  cost_price                                                                      Decimal?       @db.Decimal(10, 2)
+  username                                                                        String?        @db.VarChar(255)
+  cardex_id                                                                       Int            @id @default(autoincrement())
+  inv_products                                                                    inv_products?  @relation(fields: [company_id, sub_company_id, department_code, product_code], references: [company_id, sub_company_id, department_code, product_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations_inv_cardex_company_id_sub_company_id_from_locationToinv_locations inv_locations? @relation("inv_cardex_company_id_sub_company_id_from_locationToinv_locations", fields: [company_id, sub_company_id, from_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations_inv_cardex_company_id_sub_company_id_to_locationToinv_locations   inv_locations? @relation("inv_cardex_company_id_sub_company_id_to_locationToinv_locations", fields: [company_id, sub_company_id, to_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  sys_users                                                                       sys_users?     @relation(fields: [company_id, sub_company_id, username], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model inv_department {
+  company_id       Int
+  sub_company_id   Int
+  department_code  String           @db.VarChar(3)
+  department_name  String           @db.VarChar(255)
+  closed_flag      Boolean?         @default(false)
+  created_on       DateTime         @default(now()) @db.Timestamp(6)
+  created_by       String?          @db.VarChar(255)
+  sys_users        sys_users?       @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  gl_sub_companies gl_sub_companies @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, department_code])
+}
+
+model inv_locations {
+  company_id                                                                                           Int
+  sub_company_id                                                                                       Int
+  location_code                                                                                        String                   @db.VarChar(10)
+  location_name                                                                                        String?                  @db.VarChar(255)
+  short_name                                                                                           String?                  @db.VarChar(50)
+  closed_flag                                                                                          Boolean?                 @default(false)
+  inv_cardex_inv_cardex_company_id_sub_company_id_from_locationToinv_locations                         inv_cardex[]             @relation("inv_cardex_company_id_sub_company_id_from_locationToinv_locations")
+  inv_cardex_inv_cardex_company_id_sub_company_id_to_locationToinv_locations                           inv_cardex[]             @relation("inv_cardex_company_id_sub_company_id_to_locationToinv_locations")
+  gl_sub_companies                                                                                     gl_sub_companies         @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+  inv_purchase_order                                                                                   inv_purchase_order[]
+  inv_stores                                                                                           inv_stores[]
+  inv_transfer_inv_transfer_company_id_sub_company_id_from_locationToinv_locations                     inv_transfer[]           @relation("inv_transfer_company_id_sub_company_id_from_locationToinv_locations")
+  inv_transfer_inv_transfer_company_id_sub_company_id_to_locationToinv_locations                       inv_transfer[]           @relation("inv_transfer_company_id_sub_company_id_to_locationToinv_locations")
+  inv_transfer_sequences_inv_transfer_sequences_company_id_sub_company_id_from_locationToinv_locations inv_transfer_sequences[] @relation("inv_transfer_sequences_company_id_sub_company_id_from_locationToinv_locations")
+  inv_transfer_sequences_inv_transfer_sequences_company_id_sub_company_id_to_locationToinv_locations   inv_transfer_sequences[] @relation("inv_transfer_sequences_company_id_sub_company_id_to_locationToinv_locations")
+
+  @@id([company_id, sub_company_id, location_code])
+}
+
+model inv_product_suppliers {
+  company_id      Int
+  sub_company_id  Int
+  supplier_code   String        @db.VarChar(10)
+  department_code String        @db.VarChar(10)
+  product_code    String        @db.VarChar(10)
+  created_on      DateTime      @default(now()) @db.Timestamp(6)
+  created_by      String?       @db.VarChar(255)
+  closed_flag     Boolean       @default(false)
+  sys_users       sys_users?    @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  inv_products    inv_products  @relation(fields: [company_id, sub_company_id, department_code, product_code], references: [company_id, sub_company_id, department_code, product_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_suppliers   inv_suppliers @relation(fields: [company_id, sub_company_id, supplier_code], references: [company_id, sub_company_id, supplier_code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, supplier_code, department_code, product_code])
+}
+
+model inv_products {
+  company_id                Int
+  sub_company_id            Int
+  department_code           String                      @db.VarChar
+  product_code              String                      @db.VarChar(10)
+  product_description       String?
+  qty_instock               Int?
+  qty_purchase              Int?
+  qty_backorder             Int?
+  cost_price                Decimal?                    @db.Decimal(10, 2)
+  closed_flag               Boolean?                    @default(false)
+  created_on                DateTime                    @default(now()) @db.Timestamp(6)
+  created_by                String?                     @db.VarChar(255)
+  selling_price             Decimal?                    @db.Decimal(10, 2)
+  inv_cardex                inv_cardex[]
+  inv_product_suppliers     inv_product_suppliers[]
+  sys_users                 sys_users?                  @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  gl_sub_companies          gl_sub_companies            @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+  inv_purchase_order_detail inv_purchase_order_detail[]
+  inv_stores                inv_stores[]
+  inv_transfer_detail       inv_transfer_detail[]
+
+  @@id([company_id, sub_company_id, department_code, product_code])
+}
+
+model inv_purchase_order {
+  company_id                Int
+  sub_company_id            Int
+  order_no                  String                      @db.VarChar(20)
+  location_code             String?                     @db.VarChar(10)
+  order_dt                  DateTime?                   @db.Date
+  supplier_code             String?                     @db.VarChar(10)
+  eta                       DateTime?                   @db.Date
+  currency                  String?                     @db.VarChar(10)
+  cost_rate                 Decimal?                    @db.Decimal(10, 2)
+  supplier_invno            String?                     @db.VarChar(40)
+  remarks                   String?
+  freight                   Decimal?                    @db.Decimal(10, 2)
+  order_amount              Decimal?                    @db.Decimal(10, 2)
+  amount_paid               Decimal?                    @db.Decimal(10, 2)
+  non_vendor_cost           Decimal?                    @db.Decimal(10, 2)
+  closed_flag               Boolean?                    @default(false)
+  fulfilled_flag            Boolean?                    @default(false)
+  paid_flag                 Boolean?                    @default(false)
+  created_on                DateTime                    @default(now()) @db.Timestamp(6)
+  created_by                String?                     @db.VarChar(255)
+  sys_users                 sys_users?                  @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations             inv_locations?              @relation(fields: [company_id, sub_company_id, location_code], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_suppliers             inv_suppliers?              @relation(fields: [company_id, sub_company_id, supplier_code], references: [company_id, sub_company_id, supplier_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_purchase_order_detail inv_purchase_order_detail[]
+  inv_purchase_payment      inv_purchase_payment[]
+
+  @@id([company_id, sub_company_id, order_no])
+}
+
+model inv_purchase_order_detail {
+  company_id         Int
+  sub_company_id     Int
+  order_no           String             @db.VarChar(20)
+  serial_no          Int                @default(autoincrement())
+  department_code    String?            @db.VarChar(3)
+  product_code       String?            @db.VarChar(10)
+  qty_ordered        Int?
+  qty_received       Int?
+  cost_local         Decimal?           @db.Decimal(10, 2)
+  cost_fc            Decimal?           @db.Decimal(10, 2)
+  inv_products       inv_products?      @relation(fields: [company_id, sub_company_id, department_code, product_code], references: [company_id, sub_company_id, department_code, product_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_purchase_order inv_purchase_order @relation(fields: [company_id, sub_company_id, order_no], references: [company_id, sub_company_id, order_no], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, order_no, serial_no])
+}
+
+model inv_purchase_payment {
+  company_id         Int
+  sub_company_id     Int
+  order_no           String             @db.VarChar(20)
+  payment_no         Int                @default(autoincrement())
+  payment_dt         DateTime?          @db.Date
+  remarks            String?            @db.VarChar(600)
+  amount             Decimal?           @db.Decimal(10, 2)
+  created_on         DateTime           @default(now()) @db.Timestamp(6)
+  created_by         String?            @db.VarChar(255)
+  sys_users          sys_users?         @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  inv_purchase_order inv_purchase_order @relation(fields: [company_id, sub_company_id, order_no], references: [company_id, sub_company_id, order_no], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, order_no, payment_no])
+}
+
+model inv_stores {
+  company_id      Int
+  sub_company_id  Int
+  location_code   String        @db.VarChar(10)
+  department_code String        @db.VarChar(3)
+  product_code    String        @db.VarChar(10)
+  opening_balance Int?
+  qty_instock     Int?
+  qty_backorder   Int?
+  qty_purchase    Int?
+  qty_transfer    Int?
+  inv_products    inv_products  @relation(fields: [company_id, sub_company_id, department_code, product_code], references: [company_id, sub_company_id, department_code, product_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations   inv_locations @relation(fields: [company_id, sub_company_id, location_code], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, location_code, department_code, product_code])
+}
+
+model inv_suppliers {
+  company_id            Int
+  sub_company_id        Int
+  supplier_code         String                  @db.VarChar(10)
+  supplier_name         String                  @db.VarChar(255)
+  address_1             String?                 @db.VarChar(255)
+  address_2             String?                 @db.VarChar(255)
+  country               String?                 @db.VarChar(50)
+  telephone_no          String?                 @db.VarChar(15)
+  mobile_no             String?                 @db.VarChar(15)
+  email                 String?                 @db.VarChar(255)
+  fax                   String?                 @db.VarChar(40)
+  closed_flag           Boolean?                @default(false)
+  created_on            DateTime                @default(now()) @db.Timestamp(6)
+  created_by            String?                 @db.VarChar(255)
+  inv_product_suppliers inv_product_suppliers[]
+  inv_purchase_order    inv_purchase_order[]
+  sys_users             sys_users?              @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  gl_sub_companies      gl_sub_companies        @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, supplier_code])
+}
+
+model inv_transfer {
+  company_id                                                                        Int
+  sub_company_id                                                                    Int
+  from_location                                                                     String                @db.VarChar(10)
+  to_location                                                                       String                @db.VarChar(10)
+  transfer_no                                                                       String
+  transfer_dt                                                                       DateTime?             @db.Date
+  acknowledge_dt                                                                    DateTime?             @db.Date
+  received_by                                                                       String?               @db.VarChar(255)
+  remarks                                                                           String?
+  created_by                                                                        String?               @db.VarChar(255)
+  created_on                                                                        DateTime              @default(now()) @db.Timestamp(6)
+  sys_users                                                                         sys_users?            @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations_inv_transfer_company_id_sub_company_id_from_locationToinv_locations inv_locations         @relation("inv_transfer_company_id_sub_company_id_from_locationToinv_locations", fields: [company_id, sub_company_id, from_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations_inv_transfer_company_id_sub_company_id_to_locationToinv_locations   inv_locations         @relation("inv_transfer_company_id_sub_company_id_to_locationToinv_locations", fields: [company_id, sub_company_id, to_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_transfer_detail                                                               inv_transfer_detail[]
+
+  @@id([company_id, sub_company_id, from_location, to_location, transfer_no])
+}
+
+model inv_transfer_detail {
+  company_id      Int
+  sub_company_id  Int
+  transfer_no     String
+  serial_no       Int           @default(autoincrement())
+  department_code String?       @db.VarChar(3)
+  product_code    String?       @db.VarChar(10)
+  qty_transferred Int?
+  from_location   String        @db.VarChar(10)
+  to_location     String        @db.VarChar(10)
+  created_by      String?       @db.VarChar(255)
+  created_on      DateTime      @default(now()) @db.Timestamp(6)
+  sys_users       sys_users?    @relation(fields: [company_id, sub_company_id, created_by], references: [company_id, sub_company_id, username], onDelete: NoAction, onUpdate: NoAction)
+  inv_products    inv_products? @relation(fields: [company_id, sub_company_id, department_code, product_code], references: [company_id, sub_company_id, department_code, product_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_transfer    inv_transfer  @relation(fields: [company_id, sub_company_id, from_location, to_location, transfer_no], references: [company_id, sub_company_id, from_location, to_location, transfer_no], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, from_location, to_location, transfer_no, serial_no])
+}
+
+model inv_transfer_sequences {
+  company_id                                                                                  Int
+  sub_company_id                                                                              Int
+  from_location                                                                               String        @db.VarChar(10)
+  to_location                                                                                 String        @db.VarChar(10)
+  sequence_number                                                                             String?       @db.VarChar(200)
+  inv_locations_inv_transfer_sequences_company_id_sub_company_id_from_locationToinv_locations inv_locations @relation("inv_transfer_sequences_company_id_sub_company_id_from_locationToinv_locations", fields: [company_id, sub_company_id, from_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+  inv_locations_inv_transfer_sequences_company_id_sub_company_id_to_locationToinv_locations   inv_locations @relation("inv_transfer_sequences_company_id_sub_company_id_to_locationToinv_locations", fields: [company_id, sub_company_id, to_location], references: [company_id, sub_company_id, location_code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, from_location, to_location])
+}
+
+model sys_programs {
+  company_id       Int
+  sub_company_id   Int
+  program_id       Int                @default(autoincrement())
+  program_name     String             @db.VarChar(255)
+  gl_sub_companies gl_sub_companies   @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+  sys_roleprograms sys_roleprograms[]
+
+  @@id([company_id, sub_company_id, program_id])
+}
+
+model sys_roleprograms {
+  company_id     Int
+  sub_company_id Int
+  role_name      String       @db.VarChar(255)
+  program_id     Int
+  access         Boolean?     @default(true)
+  sys_programs   sys_programs @relation(fields: [company_id, sub_company_id, program_id], references: [company_id, sub_company_id, program_id], onDelete: NoAction, onUpdate: NoAction)
+  sys_roles      sys_roles    @relation(fields: [company_id, sub_company_id, role_name], references: [company_id, sub_company_id, role_name], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, role_name, program_id])
+}
+
+model sys_roles {
+  company_id       Int
+  sub_company_id   Int
+  role_name        String             @db.VarChar(255)
+  sys_roleprograms sys_roleprograms[]
+  gl_sub_companies gl_sub_companies   @relation(fields: [company_id, sub_company_id], references: [company_id, sub_company_id], onDelete: NoAction, onUpdate: NoAction)
+  sys_users        sys_users[]
+
+  @@id([company_id, sub_company_id, role_name])
+}
+
+model sys_users {
+  company_id            Int
+  sub_company_id        Int
+  username              String                  @db.VarChar(255)
+  password              String                  @db.VarChar(255)
+  email                 String                  @db.VarChar(255)
+  verified              Boolean?
+  role_name             String                  @db.VarChar(255)
+  id                    Int                     @default(autoincrement())
+  inv_cardex            inv_cardex[]
+  inv_department        inv_department[]
+  inv_product_suppliers inv_product_suppliers[]
+  inv_products          inv_products[]
+  inv_purchase_order    inv_purchase_order[]
+  inv_purchase_payment  inv_purchase_payment[]
+  inv_suppliers         inv_suppliers[]
+  inv_transfer          inv_transfer[]
+  inv_transfer_detail   inv_transfer_detail[]
+  sys_roles             sys_roles               @relation(fields: [company_id, sub_company_id, role_name], references: [company_id, sub_company_id, role_name], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([company_id, sub_company_id, username])
+}
